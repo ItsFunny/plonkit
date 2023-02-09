@@ -19,6 +19,7 @@ pub mod reader;
 pub mod recursive;
 pub mod transpile;
 pub mod utils;
+pub mod witness;
 
 pub use franklin_crypto::bellman as bellman_ce;
 

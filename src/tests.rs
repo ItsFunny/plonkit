@@ -1,8 +1,11 @@
+use std::collections::HashMap;
 use std::fs;
+use num_bigint::BigInt;
 
 use crate::bellman_ce::bn256::Bn256;
 use crate::circom_circuit::CircomCircuit;
 use crate::{plonk, reader};
+use crate::witness::witness_calculator::WitnessCalculator;
 
 const CIRCUIT_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/circuit.r1cs.json");
 const WITNESS_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/witness.json");
@@ -59,7 +62,7 @@ fn test_prove() {
         reader::load_key_monomial_form(MONOMIAL_KEY_FILE),
         reader::maybe_load_key_lagrange_form(None),
     )
-    .unwrap();
+        .unwrap();
 
     assert!(setup.validate_witness(circuit.clone()).is_ok());
 
@@ -78,4 +81,26 @@ fn test_verify() {
 
     let proof = reader::load_proof::<Bn256>(PROOF_FILE);
     assert!(plonk::verify(&vk, &proof, DEFAULT_TRANSCRIPT).expect("fail to verify proof"));
+}
+
+
+#[test]
+fn test_calculate_witness() {
+    let path = "/Users/lvcong/rust/plonkit/test/circoms/mycircuit.wasm";
+    let mut wtns = WitnessCalculator::new(path).unwrap();
+    let mut inputs: HashMap<String, Vec<BigInt>> = HashMap::new();
+
+    {
+        let values = inputs.entry("a".to_string()).or_insert_with(Vec::new);
+        values.push(1.into());
+    }
+
+    {
+        let values = inputs.entry("b".to_string()).or_insert_with(Vec::new);
+        values.push(2.into());
+    }
+
+
+    let resp = wtns.calculate_witness(inputs, false).unwrap();
+    println!("{:?}", resp);
 }

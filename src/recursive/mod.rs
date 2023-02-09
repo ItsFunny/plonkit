@@ -1,4 +1,5 @@
 #![allow(clippy::needless_range_loop)]
+
 use crate::{bellman_ce, utils};
 use bellman_ce::kate_commitment::{Crs, CrsForMonomialForm};
 use bellman_ce::pairing::bn256;
@@ -19,12 +20,14 @@ use bellman_ce::plonk::{
 };
 use bellman_ce::worker::Worker;
 use bellman_ce::{Field, SynthesisError};
+use franklin_crypto::bellman::PrimeField;
 use franklin_crypto::plonk::circuit::bigint::field::RnsParameters;
 use franklin_crypto::plonk::circuit::verifier_circuit::affine_point_wrapper::aux_data::{AuxData, BN256AuxData};
 use franklin_crypto::plonk::circuit::verifier_circuit::data_structs::IntoLimbedWitness;
 use franklin_crypto::plonk::circuit::Width4WithCustomGates;
 use franklin_crypto::rescue::bn256::Bn256RescueParams;
 use itertools::Itertools;
+use num_bigint::BigUint;
 use recurisive_vk_codegen::circuit::{
     create_recursive_circuit_setup, create_recursive_circuit_vk_and_setup, create_vks_tree, make_aggregate,
     make_public_input_and_limbed_aggregate, RecursiveAggregationCircuitBn256,
@@ -144,7 +147,7 @@ fn verify_subproof_limbs(
     //keep the behavior same as recursive_aggregation_circuit
     rns_params.set_prefer_single_limb_allocation(true);
 
-    let aggr_limbs_nums: Vec<utils::BigUint> = proof.aggr_limbs.iter().map(utils::fe_to_biguint).collect();
+    let aggr_limbs_nums: Vec<utils::BigUint> = proof.aggr_limbs.iter().map(fe_to_biguint).collect();
     //we need 4 Fr to build 2 G1Affine ...
     let num_consume = rns_params.num_limbs_for_in_field_representation;
     assert_eq!(num_consume * 4, aggr_limbs_nums.len());
@@ -165,7 +168,7 @@ fn verify_subproof_limbs(
         (&pair_with_generator.prepare(), &vk.g2_elements[0].prepare()),
         (&pair_with_x.prepare(), &vk.g2_elements[1].prepare()),
     ]))
-    .ok_or(SynthesisError::Unsatisfiable)?
+        .ok_or(SynthesisError::Unsatisfiable)?
         == <Bn256 as Engine>::Fqk::one();
 
     Ok(valid)
@@ -235,4 +238,25 @@ pub fn get_aggregated_input(
 pub fn get_vk_tree_root_hash(old_vk: OldVerificationKey<Bn256, PlonkCsWidth4WithNextStepParams>) -> Result<bn256::Fr, anyhow::Error> {
     let (_, (vks_tree, _)) = create_vks_tree(&vec![old_vk], VK_TREE_DEPTH)?;
     Ok(vks_tree.get_commitment())
+}
+
+
+pub fn fe_to_biguint<F: PrimeField>(el: &F) -> BigUint {
+    let repr = el.into_repr();
+
+    repr_to_biguint::<F>(&repr)
+}
+
+pub fn repr_to_biguint<F: PrimeField>(repr: &F::Repr) -> BigUint {
+    let mut b = BigUint::from(0u64);
+    for &limb in repr.as_ref().iter().rev() {
+        b <<= 64;
+        b += BigUint::from(limb)
+    }
+
+    b
+}
+
+pub fn biguint_to_fe<F: PrimeField>(value: BigUint) -> F {
+    F::from_str(&value.to_str_radix(10)).unwrap()
 }
