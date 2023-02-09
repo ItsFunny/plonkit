@@ -42,7 +42,7 @@ thiserror = "1.0.38"
 cfg-if = "1.0.0"
 ark-ec = { version = "0.3.0", default-features = false, features = ["parallel"] }
 ark-bn254 = { version = "0.3.0" }
-
+bytes = "1.4.0"
 
 [features]
 default = [ ]

@@ -11,7 +11,7 @@ const CIRCUIT_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/ci
 const WITNESS_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/witness.json");
 const VK_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/vk.bin");
 const PROOF_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/proof.bin");
-const MONOMIAL_KEY_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/keys/setup/setup_2^10.key");
+const MONOMIAL_KEY_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/keys/setup/setup_2^20.key");
 const DEFAULT_TRANSCRIPT: &'static str = "keccak";
 
 const CIRCUIT_ANALYZE_RESULT: &'static str = r#"{"num_inputs":2,"num_aux":2,"num_variables":4,"num_constraints":2,"num_nontrivial_constraints":2,"num_gates":3,"num_hints":2,"constraint_stats":[{"name":"0","num_gates":1},{"name":"1","num_gates":2}]}"#;
@@ -83,6 +83,39 @@ fn test_verify() {
     assert!(plonk::verify(&vk, &proof, DEFAULT_TRANSCRIPT).expect("fail to verify proof"));
 }
 
+#[test]
+fn test_prove2() {
+    let cir_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/circuit.r1cs";
+    let wit_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/witness.wtns";
+    let key_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/plonk_single_tx_0001.key";
+    let vk_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/vk.bin";
+    let circuit = CircomCircuit {
+        r1cs: reader::load_r1cs(cir_file),
+        witness: Some(reader::load_witness_from_file::<Bn256>(wit_file)),
+        wire_mapping: None,
+        aux_offset: plonk::AUX_OFFSET,
+    };
+
+    let setup = plonk::SetupForProver::prepare_setup_for_prover(
+        circuit.clone(),
+        reader::load_key_monomial_form(MONOMIAL_KEY_FILE),
+        reader::maybe_load_key_lagrange_form(None),
+    )
+        .unwrap();
+
+    assert!(setup.validate_witness(circuit.clone()).is_ok());
+
+    let _ = setup.get_srs_lagrange_form_from_monomial_form();
+
+    let proof = setup.prove(circuit, DEFAULT_TRANSCRIPT).unwrap();
+
+    let vk = reader::load_verification_key::<Bn256>(vk_file);
+    let mut proof_bytes = vec![];
+    proof.write(&mut proof_bytes).unwrap();
+
+    let proof = reader::load_proof_from_bytes::<Bn256>(proof_bytes);
+    assert!(plonk::verify(&vk, &proof, DEFAULT_TRANSCRIPT).expect("fail to verify proof"));
+}
 
 #[test]
 fn test_calculate_witness() {

@@ -3,7 +3,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use itertools::Itertools;
 use std::collections::BTreeMap;
 use std::fs::{File, OpenOptions};
-use std::io::{BufRead, BufReader, Read, Seek};
+use std::io::{BufRead, BufReader, Cursor, Read, Seek};
 use std::str;
 
 use crate::bellman_ce::{
@@ -22,6 +22,11 @@ use crate::recursive::{AggregatedProof, RecursiveVerificationKey};
 /// load proof by filename
 pub fn load_proof<E: Engine>(filename: &str) -> Proof<E, PlonkCsWidth4WithNextStepParams> {
     Proof::<E, PlonkCsWidth4WithNextStepParams>::read(File::open(filename).expect("read proof file err")).expect("read proof err")
+}
+
+pub fn load_proof_from_bytes<E: Engine>(bs: Vec<u8>) -> Proof<E, PlonkCsWidth4WithNextStepParams> {
+    let c = Cursor::new(bs);
+    Proof::<E, PlonkCsWidth4WithNextStepParams>::read(c).expect("read proof err")
 }
 
 /// load multiple proofs form a list
