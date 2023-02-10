@@ -3,6 +3,9 @@ use color_eyre::Result;
 use num_bigint::BigInt;
 use num_traits::Zero;
 use std::cell::Cell;
+use std::io::Write;
+use ark_bn254::Bn254;
+use ark_ff::ToBytes;
 use num::BigUint;
 use num_traits::real::Real;
 use wasmer::{imports, Function, Instance, Memory, MemoryType, Module, RuntimeError, Store};
@@ -197,7 +200,7 @@ impl WitnessCalculator {
                 let w = if w.sign() == num_bigint::Sign::Minus {
                     // Need to negate the witness element if negative
                     let cc: num::BigUint = modulus.into();
-                    let ccc=num_bigint::BigUint::from_bytes_le(&cc.to_bytes_le());
+                    let ccc = num_bigint::BigUint::from_bytes_le(&cc.to_bytes_le());
                     ccc - w.abs().to_biguint().unwrap()
                 } else {
                     w.to_biguint().unwrap()
@@ -207,6 +210,20 @@ impl WitnessCalculator {
             .collect::<Vec<_>>();
 
         Ok(witness)
+    }
+
+    pub fn calculate_witness_element_to_bytes<
+        E: ark_ec::PairingEngine,
+        I: IntoIterator<Item=(String, Vec<BigInt>)>,
+    >(
+        &mut self,
+        inputs: I,
+        sanity_check: bool,
+    ) -> Result<(Vec<u8>)> {
+        let mut  buf = Vec::<u8>::new();
+        let resp = self.calculate_witness_element::<Bn254, _>(inputs, sanity_check).expect("failed");
+        resp.write(&mut buf).expect("fail");
+        Ok(buf)
     }
 
     // Circom 1 default behavior

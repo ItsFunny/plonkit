@@ -1,17 +1,23 @@
 use std::collections::HashMap;
 use std::fs;
+use std::io::{BufWriter, Cursor, Read};
+use ark_bn254::{Bn254, FrParameters};
+use ark_ff::{Fp256, ToBytes};
 use num_bigint::BigInt;
 
 use crate::bellman_ce::bn256::Bn256;
 use crate::circom_circuit::CircomCircuit;
 use crate::{plonk, reader};
+use crate::reader::{load_witness_from_array, load_witness_from_bin_file};
+use crate::recursive::fe_to_biguint;
 use crate::witness::witness_calculator::WitnessCalculator;
 
 const CIRCUIT_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/circuit.r1cs.json");
 const WITNESS_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/witness.json");
 const VK_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/vk.bin");
 const PROOF_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/test/circuits/simple/proof.bin");
-const MONOMIAL_KEY_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/keys/setup/setup_2^20.key");
+const MONOMIAL_KEY_FILE: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/keys/setup/setup_2^10.key");
+const MONOMIAL_KEY_FILE2: &'static str = concat!(env!("CARGO_MANIFEST_DIR"), "/keys/setup/setup_2^20.key");
 const DEFAULT_TRANSCRIPT: &'static str = "keccak";
 
 const CIRCUIT_ANALYZE_RESULT: &'static str = r#"{"num_inputs":2,"num_aux":2,"num_variables":4,"num_constraints":2,"num_nontrivial_constraints":2,"num_gates":3,"num_hints":2,"constraint_stats":[{"name":"0","num_gates":1},{"name":"1","num_gates":2}]}"#;
@@ -87,7 +93,6 @@ fn test_verify() {
 fn test_prove2() {
     let cir_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/circuit.r1cs";
     let wit_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/witness.wtns";
-    let key_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/plonk_single_tx_0001.key";
     let vk_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/vk.bin";
     let circuit = CircomCircuit {
         r1cs: reader::load_r1cs(cir_file),
@@ -98,7 +103,7 @@ fn test_prove2() {
 
     let setup = plonk::SetupForProver::prepare_setup_for_prover(
         circuit.clone(),
-        reader::load_key_monomial_form(MONOMIAL_KEY_FILE),
+        reader::load_key_monomial_form(MONOMIAL_KEY_FILE2),
         reader::maybe_load_key_lagrange_form(None),
     )
         .unwrap();
@@ -114,7 +119,18 @@ fn test_prove2() {
     proof.write(&mut proof_bytes).unwrap();
 
     let proof = reader::load_proof_from_bytes::<Bn256>(proof_bytes);
+
+    println!("\n\n\n\n proof信息为: {:?} \n\n\n", proof);
     assert!(plonk::verify(&vk, &proof, DEFAULT_TRANSCRIPT).expect("fail to verify proof"));
+}
+
+
+#[test]
+fn test_prove3() {
+    let input_json_file = "";
+    let wasm_file = "";
+    let mut wtns = WitnessCalculator::new(wasm_file).unwrap();
+    let mut inputs: HashMap<String, Vec<BigInt>> = HashMap::new();
 }
 
 #[test]
@@ -133,7 +149,24 @@ fn test_calculate_witness() {
         values.push(2.into());
     }
 
+    let cir_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/circuit.r1cs";
+    let wit_file = "/Users/lvcong/rust/plonkit/test/circuits/complex/witness.wtns";
 
-    let resp = wtns.calculate_witness(inputs, false).unwrap();
-    println!("{:?}", resp);
+    let data = wtns.calculate_witness_element_to_bytes::<Bn254, _>(inputs, false).unwrap();
+    println!("{:?}",data);
+    let circuit = CircomCircuit {
+        r1cs: reader::load_r1cs(cir_file),
+        witness: Some(reader::load_witness_from_array::<Bn256>(data).expect("fail")),
+        wire_mapping: None,
+        aux_offset: plonk::AUX_OFFSET,
+    };
+
+    let setup = plonk::SetupForProver::prepare_setup_for_prover(
+        circuit.clone(),
+        reader::load_key_monomial_form(MONOMIAL_KEY_FILE),
+        reader::maybe_load_key_lagrange_form(None),
+    )
+        .unwrap();
+
+    assert!(setup.validate_witness(circuit.clone()).is_ok());
 }
