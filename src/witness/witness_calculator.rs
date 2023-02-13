@@ -4,7 +4,7 @@ use num_bigint::BigInt;
 use num_traits::Zero;
 use std::cell::Cell;
 use std::io::Write;
-use ark_bn254::Bn254;
+use ark_bn254::{Bn254, Fr};
 use ark_ff::ToBytes;
 use num::BigUint;
 use num_traits::real::Real;
@@ -211,6 +211,22 @@ impl WitnessCalculator {
 
         Ok(witness)
     }
+    // pub fn calculate_witness_element_to_bigint<
+    //     E: ark_ec::PairingEngine,
+    //     I: IntoIterator<Item=(String, Vec<BigInt>)>,
+    // >(
+    //     &mut self,
+    //     inputs: I,
+    //     sanity_check: bool,
+    // ) -> Result<(Vec<BigInt>)> {
+    //     let calculated_witness = self.calculate_witness_element::<Bn254, _>(inputs, sanity_check).expect("failed");
+    //     let calculated_witness_vec: Vec<BigInt> = calculated_witness
+    //         .into_iter()
+    //         .map(|v| to_bigint(&v))
+    //         .collect();
+    //     Ok(calculated_witness_vec)
+    // }
+
 
     pub fn calculate_witness_element_to_bytes<
         E: ark_ec::PairingEngine,
@@ -220,11 +236,12 @@ impl WitnessCalculator {
         inputs: I,
         sanity_check: bool,
     ) -> Result<(Vec<u8>)> {
-        let mut  buf = Vec::<u8>::new();
+        let mut buf = Vec::<u8>::new();
         let resp = self.calculate_witness_element::<Bn254, _>(inputs, sanity_check).expect("failed");
         resp.write(&mut buf).expect("fail");
         Ok(buf)
     }
+
 
     // Circom 1 default behavior
     fn calculate_witness_circom1<I: IntoIterator<Item=(String, Vec<BigInt>)>>(

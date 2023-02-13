@@ -229,7 +229,7 @@ fn load_r1cs_from_bin_file(filename: &str) -> (R1CS<Bn256>, Vec<usize>) {
 }
 
 /// load r1cs from bin by a reader
-fn load_r1cs_from_bin<R: Read + Seek>(reader: R) -> (R1CS<Bn256>, Vec<usize>) {
+pub fn load_r1cs_from_bin<R: Read + Seek>(reader: R) -> (R1CS<Bn256>, Vec<usize>) {
     let file = crate::r1cs_file::from_reader(reader).expect("unable to read.");
     let num_inputs = (1 + file.header.n_pub_in + file.header.n_pub_out) as usize;
     let num_variables = file.header.n_wires as usize;
