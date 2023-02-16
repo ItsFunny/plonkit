@@ -15,7 +15,9 @@ path = "src/bin/main.rs"
 [dependencies]
 anyhow = "1.0.34"
 # bellman_ce = { git = "https://github.com/matter-labs/bellman", branch = "beta", default-features = false, features = [ "plonk" ] } # active features depend on build type
-bellman_vk_codegen = { git = "https://github.com/fluidex/solidity_plonk_verifier.git" }
+#bellman_vk_codegen = { git = "https://github.com/fluidex/solidity_plonk_verifier.git" }
+bellman_vk_codegen = { git = "https://github.com/ItsFunny/solidity_plonk_verifier.git" }
+#bellman_vk_codegen = { path = "/Users/lvcong/rust/solidity_plonk_verifier/bellman_vk_codegen" }
 byteorder = "1"
 clap = { package = "clap-v3", version = "3.0.0-beta.1" } # todo: replace with official v3 when it's released to crates.io
 env_logger = "0.8.2"
